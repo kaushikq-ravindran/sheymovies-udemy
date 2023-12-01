@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
-import Button from "../../components/Button";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { HideLoading, ShowLoading } from "../../redux/loadersSlice";
-import { message, Row, Table, Col } from "antd";
+import { message, Row, Table, Col, Tabs } from "antd";
 import { GetBookingsOfUser } from "../../apicalls/bookings";
 import moment from "moment";
 
+const { TabPane } = Tabs;
+
 function Bookings() {
-  const [bookings = [], setBookings] = useState([]);
+  const [allBookings, setAllBookings] = useState([]);
+  const [recentBookings, setRecentBookings] = useState([]);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -17,7 +19,11 @@ function Bookings() {
       dispatch(ShowLoading());
       const response = await GetBookingsOfUser();
       if (response.success) {
-        setBookings(response.data);
+        setAllBookings(response.data);
+        const filteredBookings = response.data.filter(booking =>
+          moment(booking.show.date).isAfter(moment().subtract(30, 'days'))
+        );
+        setRecentBookings(filteredBookings);
       } else {
         message.error(response.message);
       }
@@ -31,14 +37,14 @@ function Bookings() {
   useEffect(() => {
     getData();
   }, []);
-  return (
-    <div>
-      <Row gutter={[16, 16]}>
-        {bookings.map((booking) => (
-          <Col span={12}>
-            <div className="card p-2 flex justify-between uppercase">
-              <div>
-                
+
+  const renderBookings = (bookings) => (
+    <Row gutter={[16, 16]}>
+      {bookings.map((booking) => (
+        <Col span={24}>
+          <div className="card p-2">
+            <Row gutter={[16, 16]}>
+              <Col span={16}>
                 <h1 className="text-xl">
                   {booking.show.movie.title} ({booking.show.movie.language})
                 </h1>
@@ -47,17 +53,16 @@ function Bookings() {
                   {booking.show.theatre.name} ({booking.show.theatre.address})
                 </h1>
                 <h1 className="text-sm">
-                  Date & Time: {moment(booking.show.date).format("MMM Do YYYY")}{" "}
-                  - {moment(booking.show.time, "HH:mm").format("hh:mm A")}
+                  Date & Time: {moment(booking.show.date).format("MMM Do YYYY")} -
+                  {moment(booking.show.time, "HH:mm").format("hh:mm A")}
                 </h1>
-
                 <h1 className="text-sm">
                   Amount : ₹ {booking.show.ticketPrice * booking.seats.length}
                 </h1>
                 <h1 className="text-sm">Booking ID: {booking._id}</h1>
-              </div>
-
-              <div>
+                <h1 className="text-sm">Seats: {booking.seats.join(", ")}</h1>
+              </Col>
+              <Col span={8}>
                 <img
                   src={booking.show.movie.poster}
                   alt=""
@@ -65,13 +70,29 @@ function Bookings() {
                   width={100}
                   className="br-1"
                 />
-                <h1 className="text-sm">Seats: {booking.seats.join(", ")}</h1>
-              </div>
-            </div>
-          </Col>
-        ))}
-      </Row>
-    </div>
+              </Col>
+            </Row>
+          </div>
+        </Col>
+      ))}
+    </Row>
+  );
+
+  return (
+    <div>
+    <Tabs defaultActiveKey="1">
+      <TabPane tab="Recent Bookings" key="1">
+        <Row gutter={[16, 16]}>
+          {renderBookings(recentBookings)}
+        </Row>
+      </TabPane>
+      <TabPane tab="All Bookings" key="2">
+        <Row gutter={[16, 16]}>
+          {renderBookings(allBookings)}
+        </Row>
+      </TabPane>
+    </Tabs>
+  </div>
   );
 }
 
