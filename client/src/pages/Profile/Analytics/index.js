@@ -32,6 +32,7 @@ function Analytics({ openAnalyticsModal, setOpenAnalyticsModal, theatre }) {
       totalSeats += show.totalSeats;
     });
 
+
     const averageTicketPrice = totalTicketCount ? (totalRevenue / totalTicketCount) : 0;
     const averageSeatsPerShow = shows.length ? (totalSeats / shows.length) : 0;
 
@@ -44,21 +45,23 @@ function Analytics({ openAnalyticsModal, setOpenAnalyticsModal, theatre }) {
       ];
 
   };
-
+  
   const calculateMovieAnalytics = (shows) => {
-    const movieData = shows.reduce((acc, show) => {
-      const revenue = show.bookedSeats.length * show.ticketPrice;
-      if (acc[show.movie.title]) {
-        acc[show.movie.title] += revenue;
-      } else {
-        acc[show.movie.title] = revenue;
+    // Create an object to hold the total revenue for each movie
+    console.log(movieAnalytics);
+    const revenueByMovie = shows.reduce((acc, show) => {
+      // Check if show.movie and show.movie.title exist before accessing them
+      if (show.movie && show.movie.title) {
+        const revenue = show.bookedSeats.length * show.ticketPrice;
+        acc[show.movie.title] = (acc[show.movie.title] || 0) + revenue;
       }
       return acc;
     }, {});
-
-    return Object.entries(movieData).map(([name, value]) => ({
-      name,
-      Revenue: value,
+  
+    // Convert the object into an array of objects for the chart
+    return Object.keys(revenueByMovie).map(movieName => ({
+      name: movieName,
+      Revenue: revenueByMovie[movieName],
     }));
   };
 
@@ -79,6 +82,8 @@ function Analytics({ openAnalyticsModal, setOpenAnalyticsModal, theatre }) {
         setShows(showsResponse.data);
         const newChartData = calculateChartData(showsResponse.data);
         setChartData(newChartData);
+        const newMovieAnalytics = calculateMovieAnalytics(showsResponse.data); // Calculate movie analytics
+        setMovieAnalytics(newMovieAnalytics); // Set the movie analytics data
       } else {
         message.error(showsResponse.message);
       }
@@ -206,39 +211,33 @@ function Analytics({ openAnalyticsModal, setOpenAnalyticsModal, theatre }) {
 
       <div className="flex justify-between mt-1 mb-1 items-center">
         <h1 className="text-md uppercase">
-          {view === "table" ? "Analytics" : "Add Show"}
+          {view === "Analytics"}
         </h1>
-        <Button
-          variant="outlined"
-          title={view === "table" ? "Show Graph" : "Show Table"}
-          onClick={() => setView(view === "table" ? "graph" : "table")}
-        />
       </div>
       
 
-      {view === "table" ? (
+      {view === "graph" ? (
   <Table columns={columns} dataSource={shows} />
 ) : (
   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px' }}>
     <div style={{ flex: 1 }}>
-      {/* Existing LineChart for theatre analytics */}
       <LineChart
-        width={500} // Adjust this to the width of your card or container
-        height={300} // Adjust height if necessary
+        width={500} 
+        height={300}
         data={chartData}
         margin={{
           top: 5,
           right: 30,
           left: 20,
-          bottom: 20, // Adjust if more space is needed
+          bottom: 20, 
         }}
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis
           dataKey="name"
           interval={0}
-          tick={{ fontSize: 12 }} // Decrease font size as needed
-          height={50} // Adjust height to ensure labels fit without overlapping
+          tick={{ fontSize: 12 }} 
+          height={50} 
         />
         <YAxis />
         <Tooltip />
@@ -248,25 +247,31 @@ function Analytics({ openAnalyticsModal, setOpenAnalyticsModal, theatre }) {
     </div>
     
     <div style={{ flex: 1 }}>
-        <BarChart
-            width={500} // Adjust to fit within your container
-            height={300} // Adjust height if necessary
-            data={movieAnalytics}
-            margin={{
-            top: 20,
-            right: 30,
-            left: 20,
-            bottom: 5,
-            }}
-        >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="revenue" fill="#82ca9d" />
-        </BarChart>
-    </div>
+    {/* New LineChart for movie revenue */}
+    <LineChart
+      width={500}
+      height={300}
+      data={movieAnalytics} // This should be your movie analytics data
+      margin={{
+        top: 5,
+        right: 30,
+        left: 20,
+        bottom: 20,
+      }}
+    >
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis
+        dataKey="name"
+        interval={0}
+        tick={{ fontSize: 12 }}
+        height={50}
+      />
+      <YAxis />
+      <Tooltip />
+      <Legend />
+      <Line type="monotone" dataKey="Revenue" stroke="#82ca9d" activeDot={{ r: 8 }} />
+    </LineChart>
+  </div>
   </div>
 )}
 
